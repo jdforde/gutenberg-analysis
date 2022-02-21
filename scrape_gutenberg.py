@@ -99,7 +99,7 @@ def scrape_book(i, s):
 def main():
     total_time = time.time()
     s = requests.Session()
-    GUTENBERG_RANGE = range(1, 10000)
+    GUTENBERG_RANGE = range(10000, 30000)
     MAX_WORKERS = 5000
 
     futures = []
@@ -122,7 +122,7 @@ def main():
 
     
     df = pd.DataFrame(df_dict)
-    df.to_csv('gutenburg.csv')
+    df.to_csv('gutenburg2.csv')
     print('Finished entire program in {:.2f} seconds'.format(time.time() - total_time))
 
 
