@@ -1,13 +1,15 @@
-from multiprocessing.connection import Connection
-import requests
+import requests, time
 from bs4 import BeautifulSoup
 from datetime import datetime
 import pandas as pd
-import time
 from concurrent.futures import ThreadPoolExecutor
+
+#Script takes about 4 hours to run 
 
 BASE_URL = 'https://www.gutenberg.org/ebooks/'
 TEXT_BASE_URL = 'https://www.gutenberg.org'
+HEADERS = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.75 Safari/537.36'}
+
 df_dict = {
     'Title' : [],
     'Author' : [],
@@ -19,15 +21,13 @@ df_dict = {
     'Language' : [],
     'Release_Date' : []
 }
-headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.75 Safari/537.36'}
 
-def scrape_book(i, s):
+
+def scrape_book(i, retry=0):
     try:
         start_time = time.time()
+        page = BeautifulSoup(requests.get(BASE_URL + str(i), headers=HEADERS, timeout=20).text, 'html.parser')
 
-        page = BeautifulSoup(s.get(BASE_URL + str(i), timeout=20, headers=headers).text, 'html.parser')
-
-        #Find Author and Title
         heading = page.find('h1', {'itemprop': 'name'}).text
         if page.find('a', {'typeof': 'pgterms:agent'}): 
             author = heading[heading.rfind('by')+3:]
@@ -35,10 +35,8 @@ def scrape_book(i, s):
         else:
             author = 'NA'
             title = heading
-    
-        
-        #Cleaner implementation?
-        subject = ['NA', 'NA', 'NA'] #idea
+            
+
         subjects = page.find_all('a', {'class':'block'})
         if (len(subjects) >= 3):
             subject1 = subjects[0].text
@@ -71,10 +69,8 @@ def scrape_book(i, s):
 
         
  
-        book = BeautifulSoup(s.get(TEXT_BASE_URL + book_url, timeout=20, headers=headers).text, 'html.parser').get_text()
+        book = BeautifulSoup(requests.get(TEXT_BASE_URL + book_url, headers=HEADERS, timeout=20).text, 'html.parser').get_text()
 
-
-        #This implementation is not great. Need a better way to distinguish header and footer
         word_count = 0
 
         for line in book.split('\n'):
@@ -93,19 +89,23 @@ def scrape_book(i, s):
         return [title, author, subject1, subject2, subject3, int(downloads), int(word_count), language, release_date]
 
     except Exception as e:
-        print('ERROR: Some error occured on book {}. Dumping output: {}'.format(i, e))
+        #Since Gutenberg IP blocks people for web scraping, it is necessary to retry each page in case of failure
+        if (retry < 50):
+            retry += 1
+            return scrape_book(i, retry)
+        else:
+            print('ERROR: Some error occured on book {}. Dumping output: {}'.format(i, e))
 
 
 def main():
     total_time = time.time()
-    s = requests.Session()
-    GUTENBERG_RANGE = range(10000, 30000)
+    GUTENBERG_RANGE = range(1, 67455)
     MAX_WORKERS = 5000
 
     futures = []
     with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, len(GUTENBERG_RANGE))) as executor:
         for i in GUTENBERG_RANGE:
-            future = executor.submit(scrape_book, i, s)
+            future = executor.submit(scrape_book, i)
             futures.append(future)
     
     for row in futures:
@@ -122,7 +122,7 @@ def main():
 
     
     df = pd.DataFrame(df_dict)
-    df.to_csv('gutenburg2.csv')
+    df.to_csv('gutenburg.csv')
     print('Finished entire program in {:.2f} seconds'.format(time.time() - total_time))
 
 
