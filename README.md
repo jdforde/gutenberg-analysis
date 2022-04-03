@@ -23,4 +23,4 @@ Nightmare Abbey | Thomas Love Peacock   | Humorous Stories    | Gothic fiction  
 - **Downloads** is an integer representing the number of downloads in the past 30 days. It is a good way to measure popularity of the book.
 - **Word Count** is an integer representing the approximate word count of the book.
 - **Language** is a string representing the language of the book.
-- **Release Date** is a date object representing when the book was first published.
+- **Release Date** is a date object representing when the book was first added to the website's repository.
