@@ -60,19 +60,13 @@ def scrape_book(i, retry=0):
         subject3 = subject3.replace('\n', '')   
 
         downloads = page.find('td', {'itemprop' : 'interactionCount'}).text.split(' ')[0]
-
         release_date = datetime.strptime(page.find('td', {'itemprop': 'datePublished'}).text, "%b %d, %Y")
-
         language = page.find('tr', {'property': 'dcterms:language'}).find('td').text
-        
         book_url = page.find('a', {'title': 'Download'})['href']
-
-        
  
         book = BeautifulSoup(requests.get(TEXT_BASE_URL + book_url, headers=HEADERS, timeout=20).text, 'html.parser').get_text()
 
         word_count = 0
-
         for line in book.split('\n'):
             if '***' in line and 'start' in line.lower():
                 word_count = 0
@@ -82,8 +76,6 @@ def scrape_book(i, retry=0):
             for word in line.split(' '):
                 if word.strip() != '':
                     word_count +=1
-        
-        
         
         print('Finished scraping book {} titled {}. Finished in {:.2f} seconds from process start to end'.format(i, title, time.time() - start_time))
         return [title, author, subject1, subject2, subject3, int(downloads), int(word_count), language, release_date]
@@ -95,7 +87,6 @@ def scrape_book(i, retry=0):
             return scrape_book(i, retry)
         else:
             print('ERROR: Some error occured on book {}. Dumping output: {}'.format(i, e))
-
 
 def main():
     total_time = time.time()
@@ -120,11 +111,9 @@ def main():
             df_dict['Language'].append(row.result()[7])
             df_dict['Release_Date'].append(row.result()[8])
 
-    
     df = pd.DataFrame(df_dict)
     df.to_csv('gutenburg.csv')
     print('Finished entire program in {:.2f} seconds'.format(time.time() - total_time))
-
 
 if __name__ == '__main__':
     main()
